@@ -56,15 +56,23 @@ Trusted Publishing は、npm にパッケージがあるときにしか登録で
      `gh api -X POST repos/Shinh0707/EDCDesignTagsNPMRelease/rulesets --input .github/rulesets/main-protection.json`
      `gh api -X POST repos/Shinh0707/EDCDesignTagsNPMRelease/rulesets --input .github/rulesets/tag-protection.json`
    - Environment `npm` を作る(Settings → Environments): Required reviewers に自分、Deployment branches and tags は「Selected」にしてタグ `v*` だけ
-3. npm: 空の版(0.0.1)を手元から公開する(npm に 2FA でログインしておく)
+3. npm: 空の版(0.0.1)を手元から公開する(npm に 2FA でログインしておく)。コマンドは ASCII の文字だけにしている(日本語の入力で壊れないため)
    ```sh
-   mkdir /tmp/edc-placeholder && cd /tmp/edc-placeholder
-   cp <このリポジトリ>/LICENSE .
-   printf '%s\n' '# @entertainment-design-catalog/design-tags' '' '名前を取るための空の版です。0.1.0 以降を使ってください。' > README.md
+   # このリポジトリの直下で実行する(LICENSE を写すため)
+   mkdir /tmp/edc-placeholder
+   cp LICENSE /tmp/edc-placeholder/
+   cd /tmp/edc-placeholder
+   # npm pkg set は package.json がないと失敗するので、先に空のものを作る
+   echo '{}' > package.json
    npm pkg set name=@entertainment-design-catalog/design-tags version=0.0.1 license=MIT \
+     "description=Placeholder to reserve the package name. Use 0.1.0 or later." \
      repository.type=git repository.url=git+https://github.com/Shinh0707/EDCDesignTagsNPMRelease.git
+   printf '%s\n' '# @entertainment-design-catalog/design-tags' '' 'Placeholder to reserve the package name. Use 0.1.0 or later.' > README.md
+   # 公開されるのが LICENSE・README.md・package.json の 3 つだけか確かめる
+   npm publish --access public --dry-run
    npm publish --access public
    ```
+   - このリポジトリの中で公開しない(コードの入った版になる)。空の版はコードを含まないので、出どころの証明がなくても問題にならない
 4. npm: Trusted Publishing を登録する(stage publish だけを許可する)
    `npm trust github @entertainment-design-catalog/design-tags --file release.yml --repo Shinh0707/EDCDesignTagsNPMRelease --env npm --allow-stage-publish`
 5. npm: パッケージの Settings → Publishing access を「Require two-factor authentication and disallow tokens」にする
@@ -77,7 +85,7 @@ Trusted Publishing は、npm にパッケージがあるときにしか登録で
    - `npm stage list @entertainment-design-catalog/design-tags` で置かれた版を確かめ、`npm stage approve <stage-id>`(2FA)で公開する
    - 確かめる: npm のページに「Provenance」が出ていること。別のディレクトリで入れて `npm audit signatures`
 7. 空の版を非推奨にする:
-   `npm deprecate @entertainment-design-catalog/design-tags@0.0.1 "名前を取るための空の版です。0.1.0 以降を使ってください。"`
+   `npm deprecate @entertainment-design-catalog/design-tags@0.0.1 "Placeholder to reserve the package name. Use 0.1.0 or later."`
 
 2 回目からは 6 だけを行う(版を上げる PR → `main` → タグ)。
 
