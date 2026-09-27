@@ -1,0 +1,30 @@
+# 依存の更新の提案(docs/security.md)。対象は既定のブランチ(main)。自動マージはしない
+# - 公開直後の版は避ける(cooldown 7日)
+# - minor・patch は1つの PR にまとめる。メジャー版は1つずつ(中身を確かめて判断する)
+# - @types/node のメジャー版は上げない(engines.node の下限 22 に合わせる。上げると 22 にない API を使えてしまう)
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

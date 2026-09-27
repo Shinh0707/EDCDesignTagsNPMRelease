@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 既定の権限は読み取りだけ。ジョブごとに必要なものだけを足す
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      # engines.node は >=22。サポート中の版をすべて試す
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      # Actions は SHA で固定する(docs/security.md)。更新は Dependabot の PR で行う
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      # min-release-age・strict-allow-scripts には npm 11.16 以上が要る。版を固定して入れる
+      - run: npm install -g npm@11.19.0
+      - run: npm ci
+      - run: npm audit signatures
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run smoke
+
+  # ルールセットが必須にする検査(test)。マトリクスの全部が成功したときだけ成功にする
+  # (needs が失敗すると skipped になり、skipped は必須の検査を満たしてしまうため always() で必ず動かす)
+  test:
+    needs: node
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULT: ${{ needs.node.result }}
+        run: test "$RESULT" = success

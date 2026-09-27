@@ -1,0 +1,37 @@
+#!/bin/sh
+# コミット前の秘密情報スキャン(docs/security.md)。
+# 依存なしの最低限の検査。gitleaks が入っていれば、それも実行する。
+set -eu
+
+fail=0
+
+# 1. 秘密情報を置くファイル名がステージされていないか
+bad_names=$(git diff --cached --name-only --diff-filter=ACMR |
+  grep -E '(^|/)(\.env(\..*)?|[^/]*\.local|secrets/.*|\.runtimeconfig\.json|[^/]*service-account[^/]*\.json|[^/]*\.(pem|p12|key))$' || true)
+if [ -n "$bad_names" ]; then
+  echo "pre-commit: 秘密情報のファイルはコミットできません:" >&2
+  echo "$bad_names" | sed 's/^/  /' >&2
+  fail=1
+fi
+
+# 2. 追加行にキーらしい文字列がないか(値そのものは表示しない)
+pattern='AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9_-]{20,}|edc_sk_[A-Za-z0-9_-]{16,}|"private_key"[[:space:]]*:|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}'
+hits=$(git diff --cached -U0 --diff-filter=ACMR |
+  awk '/^\+\+\+ b\//{f=substr($0,7)} /^\+[^+]/{print f}' |
+  sort -u | while read -r f; do
+    if git show ":$f" 2>/dev/null | grep -Eq "$pattern"; then echo "$f"; fi
+  done)
+if [ -n "$hits" ]; then
+  echo "pre-commit: キーらしい文字列を含むファイルがあります:" >&2
+  echo "$hits" | sed 's/^/  /' >&2
+  fail=1
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact || fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit: 中止しました。秘密情報はローカルか Secret Manager に置いてください。" >&2
+  exit 1
+fi

@@ -1,0 +1,27 @@
+# 秘密情報(GitHub に置かない)
+.env
+.env.*
+*.local
+secrets/
+.secret.local
+.runtimeconfig.json
+service-account*.json
+*-service-account.json
+*.pem
+*.p12
+*.key
+
+# 依存・生成物
+node_modules/
+dist/
+lib/
+coverage/
+*.tgz
+.firebase/
+*.log
+
+# エディタ・OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/

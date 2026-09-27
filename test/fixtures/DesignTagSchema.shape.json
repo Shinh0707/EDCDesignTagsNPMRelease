@@ -1,0 +1,223 @@
+{
+  "type": "object",
+  "properties": {
+    "context": {
+      "type": "object",
+      "properties": {
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "perception": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "sight",
+                        "hearing",
+                        "touch",
+                        "taste",
+                        "smell"
+                      ]
+                    },
+                    "perceive": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "perceive",
+                    "method",
+                    "sources"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "cognition": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "perception",
+              "cognition",
+              "sources"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "condition": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "emotion": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "emotion"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "motivation": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "motivation"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "environment",
+        "condition",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "passive": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "perception": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "sight",
+                          "hearing",
+                          "touch",
+                          "taste",
+                          "smell"
+                        ]
+                      },
+                      "perceive": {
+                        "type": "string"
+                      },
+                      "method": {
+                        "type": "string"
+                      },
+                      "sources": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "perceive",
+                      "method",
+                      "sources"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "cognition": {
+                  "type": "string"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "perception",
+                "cognition",
+                "sources"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "internal_effects": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "emotion": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "emotion"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "motivation": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "motivation"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "passive",
+          "internal_effects",
+          "title"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "context",
+    "effects"
+  ],
+  "additionalProperties": false
+}

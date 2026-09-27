@@ -1,0 +1,76 @@
+name: release
+
+# v* のタグを押したときだけ動く(docs/release.md)。タグの作成は管理者だけ(.github/rulesets/tag-protection.json)
+on:
+  push:
+    tags: ["v*"]
+
+# 既定は権限なし。ジョブごとに必要なものだけを足す
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # キャッシュは使わない(公開物にキャッシュを混ぜない)
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - run: npm install -g npm@11.19.0
+      - name: タグと package.json の版が一致するか
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="v$(node -p 'require("./package.json").version')"
+          if [ "$TAG" != "$version" ]; then
+            echo "タグ $TAG と package.json の版 $version が違います" >&2
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm audit signatures
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run smoke
+      - name: 公開物の一覧
+        run: npm pack --dry-run 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 承認者を必須にした environment。v* のタグからだけ使える(GitHub の設定)
+    environment: npm
+    permissions:
+      contents: read
+      # Trusted Publishing(OIDC)。npm のトークンは使わない
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - run: npm install -g npm@11.19.0
+      - run: npm ci
+      # stage publish: npm に置くだけで、公開には npm 上での承認(2FA)が要る
+      # 版に "-" を含む(0.2.0-rc.1 など)ときは latest にしない
+      - name: npm stage publish
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          case "$VERSION" in
+            *-*) tag=next ;;
+            *) tag=latest ;;
+          esac
+          npm stage publish --provenance --access public --tag "$tag"
