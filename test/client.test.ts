@@ -468,4 +468,11 @@ describe("応答の中身の確認", () => {
     expect(error.code).toBe("invalid_response");
     expect(error.retryable).toBe(false);
   });
+
+  it("tags_without_sources を頼んで tags が返れば invalid_response(sources を保存された)", async () => {
+    const fetch = fakeFetch(() => json(200, { ...created, stored: "tags" }));
+    const client = new EdcClient({ baseUrl: "https://api.example.com", credential: TOKEN, fetch });
+    const error = await catchError(client.analyses.create({ text: "a", store: "tags_without_sources" }));
+    expect(error.code).toBe("invalid_response");
+  });
 });

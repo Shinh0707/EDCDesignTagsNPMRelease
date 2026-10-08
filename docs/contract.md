@@ -28,7 +28,17 @@
 
 ### 2.2 `StoreLevel`
 
-`"none" | "tags" | "content_and_tags"` — 保存を許可する範囲。
+`"none" | "tags_without_sources" | "tags" | "content_and_tags"` — 保存を許可する範囲(狭い順)。
+
+| 値 | 保存するもの |
+|---|---|
+| `none` | 中身を保存しない(取り下げの確認のため `id` は残る) |
+| `tags_without_sources` | DesignTag。ただし `sources`(`Sense.sources`・`External.sources`。入力の原文をそのまま引用したもの)はすべて空の配列にする |
+| `tags` | DesignTag(`sources` を含む) |
+| `content_and_tags` | `tags` に加えて、整形後のテキストと `story` |
+
+- `tags_without_sources` は、入力の原文を長く残せない呼ぶ側(利用規約で原文の保存期間が決まっているデータなど)のためのもの。`sources` 以外の項目は言い換え・解釈だが、原文に近い文になることはある。サーバーはそこまでは除かない
+- どの値でも、`POST /v1/analyses` のレスポンスの `output` は `sources` を含む(保存の範囲は保存にだけ効く)
 
 ### 2.3 `AnalysisOutput`
 
@@ -91,9 +101,9 @@
 | 項目 | 型 | 説明 |
 |---|---|---|
 | `id` | string | |
-| `stored` | `"tags"` \| `"content_and_tags"` | |
+| `stored` | `"tags_without_sources"` \| `"tags"` \| `"content_and_tags"` | |
 | `createdAt` | string | |
-| `output.design_tags` | DesignTag[] | |
+| `output.design_tags` | DesignTag[] | `tags_without_sources` のときは `sources` がすべて空の配列 |
 | `output.story` | string(`content_and_tags` のときだけ) | |
 | `text` | string(`content_and_tags` のときだけ) | 整形後のテキスト |
 | `meta` | RunMetadata | |

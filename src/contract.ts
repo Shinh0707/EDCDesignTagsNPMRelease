@@ -4,7 +4,8 @@ import { z } from "zod";
 import { AnalysisOutputSchema } from "./analysis.js";
 import { DesignTagSchema } from "./designTag.js";
 
-export const STORE_LEVELS = ["none", "tags", "content_and_tags"] as const;
+/** 保存を許可する範囲。狭い順。tags_without_sources は DesignTag の sources(入力の原文の引用)を空にして保存する */
+export const STORE_LEVELS = ["none", "tags_without_sources", "tags", "content_and_tags"] as const;
 export const StoreLevelSchema = z.enum(STORE_LEVELS);
 export type StoreLevel = z.infer<typeof StoreLevelSchema>;
 
@@ -36,10 +37,10 @@ export const CreateAnalysisResponseSchema = z.object({
 });
 export type CreateAnalysisResponse = z.infer<typeof CreateAnalysisResponseSchema>;
 
-/** `GET /v1/analyses/{id}` のレスポンス。story と text は content_and_tags のときだけ */
+/** `GET /v1/analyses/{id}` のレスポンス。story と text は content_and_tags のときだけ。tags_without_sources のときは sources がすべて空 */
 export const StoredAnalysisSchema = z.object({
   id: z.string().min(1),
-  stored: z.enum(["tags", "content_and_tags"]),
+  stored: z.enum(["tags_without_sources", "tags", "content_and_tags"]),
   createdAt: z.string(),
   output: z.object({
     design_tags: z.array(DesignTagSchema),
