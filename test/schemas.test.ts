@@ -80,8 +80,8 @@ describe("説明文(LLM への指示)を含めない", () => {
 });
 
 describe("POST /v1/analyses のリクエスト", () => {
-  it("保存の許可は none / tags / content_and_tags の3つ", () => {
-    expect(STORE_LEVELS).toEqual(["none", "tags", "content_and_tags"]);
+  it("保存の許可は none / tags_without_sources / tags / content_and_tags の4つ", () => {
+    expect(STORE_LEVELS).toEqual(["none", "tags_without_sources", "tags", "content_and_tags"]);
     for (const store of STORE_LEVELS) {
       expect(CreateAnalysisRequestSchema.safeParse({ text: "本文", store }).success).toBe(true);
     }
@@ -118,6 +118,12 @@ describe("GET /v1/analyses/{id} のレスポンス", () => {
 
   it("tags のときは design_tags だけで、story と text はない", () => {
     const stored = { ...base, stored: "tags", output: { design_tags: analysisOutput.design_tags } };
+    expect(StoredAnalysisSchema.parse(stored)).toEqual(stored);
+  });
+
+  it("tags_without_sources のときは design_tags だけで、sources は空", () => {
+    const withoutSources: unknown = JSON.parse(JSON.stringify(analysisOutput.design_tags, (key, value: unknown) => (key === "sources" ? [] : value)));
+    const stored = { ...base, stored: "tags_without_sources", output: { design_tags: withoutSources } };
     expect(StoredAnalysisSchema.parse(stored)).toEqual(stored);
   });
 
