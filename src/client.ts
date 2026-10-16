@@ -2,6 +2,16 @@
 // サーバーからサーバーへ呼ぶためのもの。資格情報は、エラーのメッセージにも中身にも含めない。
 import type { z } from "zod";
 import {
+  CASE_ID_PATTERN,
+  type GetCaseResponse,
+  GetCaseResponseSchema,
+  IndexVersionSchema,
+  type SearchCasesRequest,
+  SearchCasesRequestSchema,
+  type SearchCasesResponse,
+  SearchCasesResponseSchema,
+} from "./cases.js";
+import {
   type CreateAnalysisRequest,
   CreateAnalysisRequestSchema,
   type CreateAnalysisResponse,
@@ -65,6 +75,10 @@ export type EdcClientOptions = {
 };
 
 export type RequestOptions = { signal?: AbortSignal };
+export type GetCaseOptions = RequestOptions & {
+  /** 検索で返った索引の版(情報として送るだけ。古い版でも、いまの版の事例が返る) */
+  indexVersion?: string;
+};
 export type CreateOptions = RequestOptions & {
   /** 送り直し用のキー(UUID)。省くと自動で作る */
   idempotencyKey?: string;
@@ -154,6 +168,12 @@ export class EdcClient {
     /** 取り下げる(DELETE /v1/analyses/{id}) */
     delete(id: string, options?: RequestOptions): Promise<void>;
   };
+  readonly cases: {
+    /** 似た事例を探す(POST /v1/cases:search)。保存しないので送り直しの鍵は付けない */
+    search(request: SearchCasesRequest, options?: RequestOptions): Promise<SearchCasesResponse>;
+    /** 事例を引き直す(GET /v1/cases/{caseId})。もうない事例は { status: "withdrawn" } */
+    get(caseId: string, options?: GetCaseOptions): Promise<GetCaseResponse>;
+  };
 
   readonly #baseUrl: string;
   readonly #credential: Credential;
@@ -196,10 +216,10 @@ export class EdcClient {
           idempotencyKey,
         );
         // サーバーは頼んだ範囲のとおりに保存する。違えば、サーバーの不具合として知らせる
-        if (response.stored !== body.data.store) {
+        if (response.stored !== body.data.store || response.usageScope !== body.data.usageScope) {
           throw new EdcApiError({
             code: "invalid_response",
-            message: "API の応答が契約に合いません(保存の範囲が頼んだものと違います)",
+            message: "API の応答が契約に合いません(保存の範囲・使い方の範囲が頼んだものと違います)",
             retryable: false,
             status: 200,
           });
@@ -210,6 +230,24 @@ export class EdcClient {
         this.#send("GET", `/v1/analyses/${requireId(id)}`, options, StoredAnalysisSchema),
       delete: async (id, options = {}) => {
         await this.#send("DELETE", `/v1/analyses/${requireId(id)}`, options, null);
+      },
+    };
+
+    this.cases = {
+      search: async (request, options = {}) => {
+        const body = SearchCasesRequestSchema.safeParse(request);
+        if (!body.success) throw invalidArgument("リクエストが契約に合いません");
+        return this.#send("POST", "/v1/cases:search", options, SearchCasesResponseSchema, body.data);
+      },
+      get: async (caseId, options = {}) => {
+        // ID の文字はパスにそのまま入れられるものだけ(符号化しない)
+        if (typeof caseId !== "string" || !CASE_ID_PATTERN.test(caseId)) throw invalidArgument("caseId が正しくありません");
+        let query = "";
+        if (options.indexVersion !== undefined) {
+          if (!IndexVersionSchema.safeParse(options.indexVersion).success) throw invalidArgument("indexVersion が正しくありません");
+          query = `?indexVersion=${encodeURIComponent(options.indexVersion)}`;
+        }
+        return this.#send("GET", `/v1/cases/${caseId}${query}`, options, GetCaseResponseSchema);
       },
     };
   }

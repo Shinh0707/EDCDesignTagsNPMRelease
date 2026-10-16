@@ -21,17 +21,34 @@ export const RunMetadataSchema = z.object({
 });
 export type RunMetadata = z.infer<typeof RunMetadataSchema>;
 
-/** `POST /v1/analyses` のリクエスト */
-export const CreateAnalysisRequestSchema = z.strictObject({
-  text: z.string(),
-  store: StoreLevelSchema,
-});
+/**
+ * 保存したものの使い方の範囲(0.3.0)。付けなければ今までどおり
+ * - owner-only: 似たタグの索引に入れず、どのクライアントの検索・要約・事例の参照にも使わない
+ * - llm-source-only: サーバーの中の LLM の要約の材料にだけ使い、事例としては返さない
+ */
+export const USAGE_SCOPES = ["owner-only", "llm-source-only"] as const;
+export const UsageScopeSchema = z.enum(USAGE_SCOPES);
+export type UsageScope = z.infer<typeof UsageScopeSchema>;
+
+/** `POST /v1/analyses` のリクエスト。usageScope は保存するときだけ付けられる(store: "none" と一緒には付けない) */
+export const CreateAnalysisRequestSchema = z
+  .strictObject({
+    text: z.string(),
+    store: StoreLevelSchema,
+    usageScope: UsageScopeSchema.optional(),
+  })
+  .refine((request) => request.store !== "none" || request.usageScope === undefined, {
+    message: "store が none のときは usageScope を付けられません",
+    path: ["usageScope"],
+  });
 export type CreateAnalysisRequest = z.infer<typeof CreateAnalysisRequestSchema>;
 
 /** `POST /v1/analyses` のレスポンス */
 export const CreateAnalysisResponseSchema = z.object({
   id: z.string().min(1),
   stored: StoreLevelSchema,
+  /** リクエストで付けたときだけ */
+  usageScope: UsageScopeSchema.optional(),
   output: AnalysisOutputSchema,
   meta: RunMetadataSchema,
 });
@@ -41,6 +58,8 @@ export type CreateAnalysisResponse = z.infer<typeof CreateAnalysisResponseSchema
 export const StoredAnalysisSchema = z.object({
   id: z.string().min(1),
   stored: z.enum(["tags_without_sources", "tags", "content_and_tags"]),
+  /** 保存のときに付けたときだけ */
+  usageScope: UsageScopeSchema.optional(),
   createdAt: z.string(),
   output: z.object({
     design_tags: z.array(DesignTagSchema),
