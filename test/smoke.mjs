@@ -4,6 +4,13 @@ import * as pkg from "@entertainment-design-catalog/design-tags";
 
 const expected = [
   "API_ERROR_CODES",
+  "CASE_ID_PATTERN",
+  "EdcCaseSchema",
+  "GetCaseResponseSchema",
+  "SearchCasesRequestSchema",
+  "SearchCasesResponseSchema",
+  "USAGE_SCOPES",
+  "UsageScopeSchema",
   "AnalysisOutputSchema",
   "ApiErrorBodySchema",
   "CLIENT_ERROR_CODES",

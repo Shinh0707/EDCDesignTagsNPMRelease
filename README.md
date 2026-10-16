@@ -24,6 +24,10 @@ try {
   const { id, output, meta } = await client.analyses.create({ text, store: "tags" });
   const saved = await client.analyses.get(id);
   await client.analyses.delete(id); // 取り下げ
+
+  // 似た事例(論文)を探し、後で引き直す(0.3.0)
+  const { indexVersion, items } = await client.cases.search({ designTags: output.design_tags.slice(0, 5), limit: 5 });
+  const again = await client.cases.get(items[0].case.caseId, { indexVersion }); // { status: "withdrawn" } もある
 } catch (error) {
   if (error instanceof EdcApiError && error.code === "budget_exhausted") {
     // error.message は利用者に見せてよい(テキストとして表示する)。error.retryAt は次に試してよい日時
@@ -33,7 +37,7 @@ try {
 ```
 
 - 実行時の依存は `zod`(v4、peerDependency)だけ
-- `client.analyses` のメソッドの失敗は、すべて `EdcApiError`(`code`、`message`、`retryable`、`retryAt`、`status`)。`code` の一覧は [docs/contract.md](docs/contract.md) 2.5
+- `client.analyses`・`client.cases` のメソッドの失敗は、すべて `EdcApiError`(`code`、`message`、`retryable`、`retryAt`、`status`)。`code` の一覧は [docs/contract.md](docs/contract.md) 2.5
 - `new EdcClient()` の設定の誤り(`baseUrl`、`timeoutMs` など)は、作るときに `TypeError`・`RangeError` で知らせる
 - `error.message` はサーバーから来る文字列。画面に出すときは、HTML としてではなくテキストとして扱う(`innerHTML` や `dangerouslySetInnerHTML` に入れない)
 - `error.cause` には、元のエラー(通信の失敗、資格情報の関数が投げたものなど)が入ることがある。ログに出すときは中身に気をつける
